@@ -1,4 +1,3 @@
-const todosController = require('../../controllers/index').todos;
 const pointsController = require('../../controllers/index').points;
 
 module.exports = (app) => {
@@ -6,7 +5,7 @@ module.exports = (app) => {
         message: 'Welcome to the Todos API!',
     }));
 
-    app.post('/api/todos', todosController.create);
-    app.get('/api/todos', todosController.list);
+//    app.post('/api/todos', todosController.create);
     app.get('/api/points', pointsController.list);
+    app.post('/api/points', pointsController.listQuery);
 };
