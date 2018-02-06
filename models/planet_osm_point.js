@@ -3,7 +3,8 @@ module.exports = (sequelize, DataTypes) => {
   const planet_osm_point = sequelize.define('planet_osm_point', {
 //    osm_id: DataTypes.INTEGER,
     name: DataTypes.STRING,
-    tags: DataTypes.HSTORE,
+    tags: DataTypes.STRING,
+ //     'tags.email': DataTypes.STRING,
     way: DataTypes.STRING,
       "addr:housename": DataTypes.STRING,
       "addr:housenumber":DataTypes.STRING

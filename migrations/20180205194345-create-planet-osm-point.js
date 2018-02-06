@@ -11,6 +11,7 @@ module.exports = {
       way: {
         type: Sequelize.STRING
       }
+
     });
   },
   down: (queryInterface /*Sequelize*/) => {
