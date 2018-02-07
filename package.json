@@ -16,7 +16,8 @@
     "pg": "^7.4.1",
     "pg-hstore": "^2.3.2",
     "sequelize": "^4.32.6",
-    "serve-favicon": "~2.4.5"
+    "serve-favicon": "~2.4.5",
+    "transform-coordinates": "^0.1.0"
   },
   "devDependencies": {
     "nodemon": "^1.14.12"

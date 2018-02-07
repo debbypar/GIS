@@ -7,8 +7,8 @@ MAPAPP.pathName = window.location.pathname;
 $(document).ready(function(req, res) {
     initialize();
     populateMarkers(MAPAPP.pathName);
-    console.log("Readyyyyyy\n");
-    alert();
+  //  console.log("Readyyyyyy\n");
+  //  alert();
 });
 
 //Initialize our Google Map
