@@ -1,4 +1,44 @@
-extends layout
+doctype html
+html
+head
+    title= title
+    link(rel='stylesheet', href='/stylesheets/style.css')
 
-block content
+body
+    header
+        h1= title
+        h2= subtitle
+        nav
+            p Maps of great <a href="address" title="address">address</a>.
+            .main.container
+                .row
+                    .col-md-6.col-md-offset-3
+                        h1.display-4.m-b-2 Sign Up
+
+            form(method='POST' action='/address')
+                div.form-group
+                    label(for='city') City:
+                    input#city.form-control(type='text', placeholder='Ex. Rome' name='city')
+                div.form-group
+                    label(for='street') Street:
+                    input#street.form-control(type='text', placeholder='Ex. Via Tuscolana' name='street')
+                div.form-group
+                    label(for='housenumber') House Number:
+                    input#housenumber.form-control(type='text', placeholder='Ex. 13' name='housenumber')
+                button.btn.btn-primary(type='submit') Search
+p Ciaoooo
+p !{x}
+p !{y}
+p !{city}
+p !{street}
+p !{housenumber}
+
+
+    #map_canvas
+    script(src='http://ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js')
+    script(src='https://maps.googleapis.com/maps/api/js?&sensor=false')
+
     script(src='/javascripts/main.js')
+
+
+
