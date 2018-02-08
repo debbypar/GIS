@@ -27,9 +27,8 @@ fs
     });
 
 Object.keys(db).forEach(modelName => {
-    console.log("..........."+modelName);
+//    console.log("..........."+modelName);
     if (db[modelName].associate) {
-    //    console.log("Dentro: ++++++++++ "+modelName);
         db[modelName].associate(db);
     }
 });

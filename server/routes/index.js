@@ -1,4 +1,4 @@
-const pointsController = require('../../controllers/index').points;
+/*const pointsController = require('../../controllers/index').points;
 
 module.exports = (app) => {
     app.get('/api', (req, res) => res.status(200).send({
@@ -8,4 +8,4 @@ module.exports = (app) => {
 //    app.post('/api/todos', todosController.create);
     app.get('/api/points', pointsController.list);
     app.post('/api/points', pointsController.listQuery);
-};
+};*/

@@ -4,11 +4,6 @@ const Op = Sequelize.Op;
 var hstore = require('pg-hstore')();
 var source = { "addr:city": "Roma"};
 
-var queryResult = require('../public/javascripts/queryResult');
-//const populate = require('../public/javascripts/main');
-
-//var store = hstore("add:city", "Roma");
-
 const transformation = require('transform-coordinates');
 
 const transform = transformation('EPSG:900913', 'EPSG:4326');
@@ -44,30 +39,14 @@ module.exports = {
                 })
                 .then(points => {
                     console.log("////////\n");
-                    console.log(points[0].dataValues.way);
-                    console.log("////////\n");
+                    console.log(points[0].dataValues);
+                    console.log("fine /////\n");
 
                     var obj = transform.forward({x: points[0].dataValues.way.coordinates[0], y: points[0].dataValues.way.coordinates[1]});
-
-                    var objResult = {
-                        city: req.body.city,
-                        street: req.body.street,
-                        housenumber: req.body.housenumber,
-                        x:  obj.x,
-                        y: obj.y
-                    };
-
-                    queryResult.setResult(objResult);
-
-                    console.log("Ciao risultato: \n");
-                    console.log(queryResult.getResult());
 
                     console.log("obj.x ---> "+obj.x);
                     console.log("obj.y ---> "+obj.y);
                     res.render('address', {x: obj.x, y: obj.y, city: req.body.city, street: req.body.street, housenumber: req.body.housenumber, title: 'Addresses in Rome', subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules' });
-                 //   res.status(200).send(obj.x);
-                //    res.send(obj.x);
-                //    res.sendStatus(200).send(obj.x);
                 })
                 .catch(error => res.status(400).send(error));
         });
