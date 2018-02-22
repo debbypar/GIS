@@ -22,7 +22,7 @@ module.exports = {
                 type: Sequelize.STRING
             },
             housenumber: {
-                type: Sequelize.STRING
+                type: Sequelize.INTEGER
             },
             way_area: {
                 type: Sequelize.STRING

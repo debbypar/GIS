@@ -12,7 +12,7 @@ module.exports = (sequelize, DataTypes) => {
         name: DataTypes.STRING,
         city: DataTypes.STRING,
         street: DataTypes.STRING,
-        housenumber: DataTypes.STRING,
+        housenumber: DataTypes.INTEGER,
         way: DataTypes.STRING,
         lon: DataTypes.STRING,
         lat: DataTypes.STRING

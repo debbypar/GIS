@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
         name: DataTypes.STRING,
         city: DataTypes.STRING,
         street: DataTypes.STRING,
-        housenumber: DataTypes.STRING,
+        housenumber: DataTypes.INTEGER,
         way_area: DataTypes.STRING,
         way: DataTypes.STRING,
         linestring: DataTypes.GEOMETRY
