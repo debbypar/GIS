@@ -6,6 +6,9 @@ const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
 var math = require('mathjs');
 
+const linesInCityObj = [];
+
+
 
 /*function queryCityStreet(obj) {
     return point
@@ -51,9 +54,20 @@ function queryStreetInLines(obj, objPol) {
 //    console.log("Ecco;;;;;;;;;;;; "+objPol.dataValues.pol);
     return line
         .findAll({
-            attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'lin'], [Sequelize.fn('ST_INTERSECTS', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol)), 'inters']],//Sequelize.fn('ST_INTERSECTS', Sequelize.col('way'), objPol.dataValues.way)), 'intersection']/* [Sequelize.fn('ST_INTERSECT', objPol.dataValues.pointsPol.coordinates, Sequelize.fn('ST_GEOMFROMTEXT',Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))).coordinates), 'intersection']*/],
+            attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'lin'], [Sequelize.fn('ST_INTERSECTS', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol)), 'intersL']],
             where: {
-                name: obj.nameStreet
+                [Op.or]: [{name: obj.nameStreet}, {street: obj.nameStreet}]
+            }
+        });
+}
+
+function queryStreetInPoints(obj, objPol) {
+//    console.log("Ecco;;;;;;;;;;;; "+objPol.dataValues.pol);
+    return point
+        .findAll({
+            attributes: ['id', 'name', 'city', 'street', 'housenumber', 'way', 'lon', 'lat', [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'lin'], [Sequelize.fn('ST_CONTAINS', Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol), Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)))), 'intersP']],
+            where: {
+                [Op.or]: [{name: obj.nameStreet}, {street: obj.nameStreet}]
             }
         });
 }
@@ -62,20 +76,48 @@ function queryIntersectStreetCity(obj) {
     queryCityInPolygon(obj).then(function (polygons) {
         var foundCity = getMaxWayAreaPol(polygons);
 
-//        console.log("&&&&&&\n\n\n");
-//        console.log(foundCity.dataValues.pol);
+        console.log("&&&&&&\n\n\n");
+        console.log(foundCity.dataValues.id);
 
         queryStreetInLines(obj, foundCity).then(function (lines) {
-//            console.log("^^^ "+lines.length);
-            for(var j=0; j<lines.length; j++)
+            console.log("^^^ "+lines.length);
+            if(lines === null)
             {
-                console.log(j+"........Che succede con lines????");
-                console.log(lines[j].dataValues.inters);
-             //   console.log(Sequelize.fn('ST_OVERLAPS', lines[j].dataValues.way, foundCity.dataValues.way));
+                console.log("Non ho trovato "+obj.nameStreet);
+            }
+            else
+            {
+                for(var j=0; j<lines.length; j++)
+                {
+                    if(lines[j].dataValues.intersL)
+                    {
+                        linesInCityObj.push(lines[j].dataValues);
+                        console.log("lines trovate-------------\n");
+                        console.log(lines[j].dataValues.id);
+                    }
+                }
+                console.log("Numero linee: "+linesInCityObj.length);
+                if(linesInCityObj.length !== 0)
+                {
+                    //HO TROVATO STREET IN CITY, CERCARE IN POINTS
+                    console.log("Ho trovato le lineeeeeee\n");
+                    queryStreetInPoints(obj, foundCity).then(function (points) {
+                        console.log("LUNGHEZZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+                        console.log(points.length);
+                        if(points.length !== 0)
+                        {
+                            //TODO Ho trovato qualcosa in points.........
+                        }
+                        else console.log("Non c'è nulla in points, restituisco il punto centrale della via.\n");
+                    });
+                }
             }
         });
     });
+//    console.log(linesInCityObj.length+"\n"+"òòòòòòòòòòòòòòòòòò");
+//    return linesInCityObj;
 }
+
 
 
 module.exports = {
@@ -92,11 +134,12 @@ module.exports = {
 */
             var object = {
                 nameCity: req.body.city,
-                nameStreet: req.body.street
+                nameStreet: req.body.street,
+                housenumber: req.body.housenumber
             };
             console.log("Ciaooooo");
    //         queryStreetInLines(object).then(function (points) {
-        queryIntersectStreetCity(object);
+            queryIntersectStreetCity(object)
             queryCityInPolygon(object).then(function (points) {
                     console.log("////////\n");
                     for(var i=0; i<points.length; i++)
