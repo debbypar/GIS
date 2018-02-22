@@ -2,7 +2,7 @@
   "development": {
     "username": "postgres",
     "password": null,
-    "database": "gisdbrome",
+    "database": "laziodb",
     "host": "localhost",
     "port": 5432,
     "dialect": "postgres"

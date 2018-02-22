@@ -1,8 +1,10 @@
 var express = require('express'),
     router = express.Router();
 //const pointsController = require('../../controllers/index').points;
-const addressesController = require('../../controllers/index').addresses;
-
+//const addressesController = require('../../controllers/index').addresses;
+const addressesController = require('../../controllers/index').searchAddress;
+//const nodeController = require('../../controllers/index').node;
+//const wayController = require('../../controllers/index').way;
 
 router.get('/',function(req,res){
   res.render('address', { title: 'Addresses in Rome', subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules' });
