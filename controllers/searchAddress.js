@@ -6,7 +6,56 @@ const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
 var math = require('mathjs');
 
-const linesInCityObj = [];
+function queryIntersectStreetCity(obj) {
+    queryCityInPolygon(obj).then(function (polygons) {
+        var foundCity = getMaxWayAreaPol(polygons);
+
+        console.log("&&&&&&\n\n\n");
+        console.log(foundCity.dataValues.id);
+
+        queryStreetInLines(obj, foundCity).then(function (lines) {
+            console.log("^^^ "+lines.length);
+            if(lines === null)
+            {
+                console.log("Non ho trovato "+obj.nameStreet);
+                //TODO res.render(Via errata o non presente nel database).
+            }
+            else
+            {
+                for(var j=0; j<lines.length; j++)
+                {
+                    if(lines[j].dataValues.intersL)
+                    {
+                        linesInCityObj.push(lines[j].dataValues);
+                        console.log("lines trovate-------------\n");
+                        console.log(lines[j].dataValues.id);
+                    }
+                }
+                console.log("Numero linee: "+linesInCityObj.length);
+                if(linesInCityObj.length !== 0)
+                {
+                    //HO TROVATO STREET IN CITY, CERCARE IN POINTS
+                    console.log("Ho trovato le lineeeeeee\n");
+                    queryStreetInPoints(obj, foundCity).then(function (points) {
+                        console.log("LUNGHEZZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
+                        console.log(points.length);
+                        if(points.length !== 0)
+                        {
+                            //TODO Ho trovato qualcosa in points.........
+                        }
+                        else{
+                            //TODO res.render coordinate del punto centrale.
+                            console.log("Non c'è nulla in points, restituisco il punto centrale della via.\n");
+                        }
+                    });
+                }
+            }
+        });
+    });
+//    console.log(linesInCityObj.length+"\n"+"òòòòòòòòòòòòòòòòòò");
+//    return linesInCityObj;
+}
+
 
 
 
@@ -54,7 +103,7 @@ function queryStreetInLines(obj, objPol) {
 //    console.log("Ecco;;;;;;;;;;;; "+objPol.dataValues.pol);
     return line
         .findAll({
-            attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'lin'], [Sequelize.fn('ST_INTERSECTS', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol)), 'intersL']],
+            attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_CENTROID', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'centroidL'], [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'lin'], [Sequelize.fn('ST_INTERSECTS', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol)), 'intersL']],
             where: {
                 [Op.or]: [{name: obj.nameStreet}, {street: obj.nameStreet}]
             }
@@ -67,108 +116,171 @@ function queryStreetInPoints(obj, objPol) {
         .findAll({
             attributes: ['id', 'name', 'city', 'street', 'housenumber', 'way', 'lon', 'lat', [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'lin'], [Sequelize.fn('ST_CONTAINS', Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol), Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)))), 'intersP']],
             where: {
-                [Op.or]: [{name: obj.nameStreet}, {street: obj.nameStreet}]
-            }
-        });
-}
-
-function queryIntersectStreetCity(obj) {
-    queryCityInPolygon(obj).then(function (polygons) {
-        var foundCity = getMaxWayAreaPol(polygons);
-
-        console.log("&&&&&&\n\n\n");
-        console.log(foundCity.dataValues.id);
-
-        queryStreetInLines(obj, foundCity).then(function (lines) {
-            console.log("^^^ "+lines.length);
-            if(lines === null)
-            {
-                console.log("Non ho trovato "+obj.nameStreet);
-            }
-            else
-            {
-                for(var j=0; j<lines.length; j++)
-                {
-                    if(lines[j].dataValues.intersL)
-                    {
-                        linesInCityObj.push(lines[j].dataValues);
-                        console.log("lines trovate-------------\n");
-                        console.log(lines[j].dataValues.id);
+                [Op.and]: [{
+                    [Op.or]: [{name: obj.nameStreet}, {street: obj.nameStreet}]
+                }, {
+                    housenumber: {
+                        [Op.not]: ''
                     }
-                }
-                console.log("Numero linee: "+linesInCityObj.length);
-                if(linesInCityObj.length !== 0)
-                {
-                    //HO TROVATO STREET IN CITY, CERCARE IN POINTS
-                    console.log("Ho trovato le lineeeeeee\n");
-                    queryStreetInPoints(obj, foundCity).then(function (points) {
-                        console.log("LUNGHEZZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-                        console.log(points.length);
-                        if(points.length !== 0)
-                        {
-                            //TODO Ho trovato qualcosa in points.........
-                        }
-                        else console.log("Non c'è nulla in points, restituisco il punto centrale della via.\n");
-                    });
-                }
+                }]
             }
         });
-    });
-//    console.log(linesInCityObj.length+"\n"+"òòòòòòòòòòòòòòòòòò");
-//    return linesInCityObj;
 }
+
 
 
 
 module.exports = {
     listQuery(req, res) {
 
+        var linesInCityObj = [];
+        var pointsInCityObj = [];
+
         //TODO Controllare che l'house number che arriva sia fatto di soli numeri e parsarlo.
 
-/*            var object = {
-                city: req.body.city,
-                street: req.body.street,
-                housenumber: req.body.housenumber
-            };
-            queryCityStreetHouseNumber(object).then(function (points) {
-*/
-            var object = {
+            var obj = {
                 nameCity: req.body.city,
                 nameStreet: req.body.street,
                 housenumber: req.body.housenumber
             };
-            console.log("Ciaooooo");
-   //         queryStreetInLines(object).then(function (points) {
-            queryIntersectStreetCity(object)
-            queryCityInPolygon(object).then(function (points) {
-                    console.log("////////\n");
-                    for(var i=0; i<points.length; i++)
-                    {
-                  //      console.log("...................."+points[i].dataValues.way_area);
-                  //      console.log(points[i].dataValues.dumpP+'\n\n');
 
-                    }
-                    console.log("fine /////\n");
+            queryCityInPolygon(obj).then(function (polygons) {
+                if(polygons.length !== 0) {
+                    //Prendo la geometria di area maggiore se presenti più geometrie per una stessa città (o paese).
+                    var foundCity = getMaxWayAreaPol(polygons);
 
-                    if(points === null)
-                    {
-                        var obj = {
-                            city: req.body.city,
-                            street: req.body.street
-                        };
-                        console.log("E' vuoto");
-                        console.log("$$$$$$$$$$$$$$$$$$$$$$$$$$$");
-                    /*    queryCityStreet(obj).then(function (result) {
-                           console.log(result.length);
-                       });*/
-                       // queryResult(obj);
-                    }
-                    console.log("Finito??");
-                    console.log("Lunghezza: "+points.length);
+                    console.log("&&&&&&\n\n\n");
+                    console.log(foundCity.dataValues.id);
 
-//                    console.log("..."+points[0].dataValues.lon+"..."+points[0].dataValues.lat+"..."+req.body.city+"..."+req.body.street+"..."+req.body.housenumber);
-                    res.render('address', {lon: '13.8975237757149'/*points.dataValues.lon*/, lat: '41.3944400645477'/*points.dataValues.lat*/, city: req.body.city, street: req.body.street, housenumber: req.body.housenumber, title: 'Addresses in Rome', subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules' });
-                })
-                .catch(error => res.status(400).send(error));
+                    queryStreetInLines(obj, foundCity).then(function (lines) {
+                        console.log("Elementi trovati in lines per "+req.body.street+": " + lines.length);
+                        if (lines.length === 0) {
+                            console.log("Non ho trovato " + obj.nameStreet);
+
+                            //Via errata o non presente nel database.
+                            res.render('address', {
+                                city: req.body.city,
+                                street: req.body.street,
+                                housenumber: req.body.housenumber,
+                                subtitle: "Error in city "+req.body.street+"!!!"
+                            });
+                        }
+                        else {
+                            console.log("Ho trovato "+req.body.street+" in lines. Verifico l'intersezione con "+req.body.city+".\n");
+                            for (var j = 0; j < lines.length; j++) {
+                                console.log(j + ": " + lines[j].dataValues.intersL + "-------" + JSON.stringify(lines[j].dataValues.centroidL));
+                                if (lines[j].dataValues.intersL) {
+                                    linesInCityObj.push(lines[j].dataValues);
+                                    console.log("lines con intersezione a true -------------> "+lines[j].dataValues.id);
+                                }
+                            }
+                            console.log("Numero linee con inters a true: " + linesInCityObj.length);
+                            if(linesInCityObj.length !== 0) {
+                                //HO TROVATO STREET IN CITY, CERCARE IN POINTS
+                                queryStreetInPoints(obj, foundCity).then(function (points) {
+                                    console.log("Cerco "+req.body.street+" con housenumber NOT NULL in points");
+                                    console.log("Punti trovati: "+points.length);
+                                    if (points.length !== 0) {
+                                        //CERCO I PUNTI CON INTERSEZIONE CON LA CITTA' A TRUE;
+                                        for (var z = 0; z < points.length; z++) {
+                                            if (points[z].dataValues.intersP) {
+                                                pointsInCityObj.push(points[z].dataValues);
+                                            }
+                                        }
+                                        console.log("In point c'è qualcosa per"+ obj.nameStreet + " con housenumber NOT NULL. Quelli che intersecano la città inserita sono " + pointsInCityObj.length);
+                                        if (pointsInCityObj.length === 0) {
+                                            //HO TROVATO QUALCHE PUNTO IN POINTS CON HOUSENUMBER DIVERSO DA NULL, MA NESSUNO DI QUESTI INTERSECA LA CITTA' INSERITA.
+                                            console.log("Non c'è intersezione da points, restituisco uno dei punti centrali della via.\n");
+                                            res.render('address', {
+                                                lon: linesInCityObj[0].centroidL[0],
+                                                lat: linesInCityObj[0].centroidL[1],
+                                                city: req.body.city,
+                                                street: req.body.street,
+                                                housenumber: req.body.housenumber,
+                                                title: 'Addresses in Rome',
+                                                subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules'
+                                            });
+
+                                        }
+                                        else if (pointsInCityObj.length === 1) {
+                                            console.log("Un solo indirizzo per " + obj.nameStreet + " in points. INTERSEZIONE: " + pointsInCityObj[0].intersP + ".... Coordinate: " + pointsInCityObj[0].lat + "..." + pointsInCityObj[0].lon);
+                                            res.render('address', {
+                                                lon: pointsInCityObj[0].lon,
+                                                lat: pointsInCityObj[0].lat,
+                                                city: req.body.city,
+                                                street: req.body.street,
+                                                housenumber: req.body.housenumber,
+                                                title: 'Addresses in Rome',
+                                                subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules'
+                                            });
+                                        }
+                                        else {
+                                            console.log("Più di un indirizzo con housenumber in point interseca la città.\n");
+                                            for (var k = 0; k < pointsInCityObj.length; k++) {
+                                                //TODO Avendo più punti, devo decidere quali lon e lat restituire.
+                                                console.log("INTERSEZIONE: " + pointsInCityObj[k].intersP + "....House Number: " + pointsInCityObj[k].housenumber + " ---lat " + pointsInCityObj[k].lat + " ---lon " + pointsInCityObj[k].lon);
+
+
+                                            }
+
+                                            res.render('address', {
+                                                lon: '13.8975237757149'/*points.dataValues.lon*/,
+                                                lat: '41.3944400645477'/*points.dataValues.lat*/,
+                                                city: req.body.city,
+                                                street: req.body.street,
+                                                housenumber: req.body.housenumber,
+                                                title: 'Addresses in Rome',
+                                                subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules'
+                                            });
+
+                                        }
+                                    }
+                                    else {
+                                        //NON HO TROVATO ALCUN PUNTO CON HOUSENUMBER DIVERSO DA NULL.
+                                        console.log("Non c'è nulla con housenumber in points, restituisco uno dei punti centrali della via.\n");
+                                     //   console.log(linesInCityObj[0].centroidL.coordinates[0]+"*************"+linesInCityObj[0].centroidL.coordinates[1]);
+                                    //    console.log(JSON.stringify(linesInCityObj[0]));
+                                        //TODO Si può migliorare unendo tutte le parti delle vie che si toccano e da lì prendere il punto di intersezione.
+                                        res.render('address', {
+                                            lon: linesInCityObj[0].centroidL.coordinates[0],
+                                            lat: linesInCityObj[0].centroidL.coordinates[1],
+                                            city: req.body.city,
+                                            street: req.body.street,
+                                            housenumber: req.body.housenumber,
+                                            title: 'Addresses in Rome',
+                                            subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules'
+                                        });
+                                    }
+                                });
+                            }
+                            else{
+                                console.log("Via e Città esistenti ma nessuna intersezione tra "+req.body.city+" e "+req.body.street);
+                                res.render('address', {
+                                    city: req.body.city,
+                                    street: req.body.street,
+                                    housenumber: req.body.housenumber,
+                                    subtitle: "There is no "+req.body.street+" in "+req.body.city+"!!!"
+                                });
+                            }
+                        }
+                    });
+                }
+                else{
+                    res.render('address', {
+                        city: req.body.city,
+                        street: req.body.street,
+                        housenumber: req.body.housenumber,
+                        subtitle: req.body.city+" NOT FOUND!!!"
+                    });
+                }
+            });
+
     },
 };
+
+/*queryIntersectStreetCity(object).then(function (points) {
+
+//                    console.log("..."+points[0].dataValues.lon+"..."+points[0].dataValues.lat+"..."+req.body.city+"..."+req.body.street+"..."+req.body.housenumber);
+                    res.render('address', {lon: '13.8975237757149'/*points.dataValues.lon*/ //, lat: '41.3944400645477'/*points.dataValues.lat*/, city: req.body.city, street: req.body.street, housenumber: req.body.housenumber, title: 'Addresses in Rome', subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules' });
+/*})
+.catch(error => res.status(400).send(error));*/
