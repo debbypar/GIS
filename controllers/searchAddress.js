@@ -111,7 +111,6 @@ function queryStreetInLines(obj, objPol) {
 }
 
 function queryStreetInPoints(obj, objPol) {
-//    console.log("Ecco;;;;;;;;;;;; "+objPol.dataValues.pol);
     return point
         .findAll({
             attributes: ['id', 'name', 'city', 'street', 'housenumber', 'way', 'lon', 'lat', [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'lin'], [Sequelize.fn('ST_CONTAINS', Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol), Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)))), 'intersP']],
@@ -126,6 +125,79 @@ function queryStreetInPoints(obj, objPol) {
             }
         });
 }
+
+/**
+ * Questa funzione restituisce la strada più vicina al punto con housenumber più vicino a quello in input, più piccolo.
+ **/
+function queryPointsMinLine(extremes, obj) {
+    return line.findOne({
+        attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'linestring'], [Sequelize.fn('ST_DISTANCE', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), extremes.elements[0].lin), 'minLineDistance']],
+        where: {
+            [Op.or]: [{name: obj.nameStreet}, {street: obj.nameStreet}]
+        },
+        order: Sequelize.literal('"minLineDistance" ASC')
+    });
+}
+
+/**
+ * Questa funzione restituisce la strada più vicina al punto con housenumber più vicino a quello in input, più grande.
+ **/
+function queryPointsMaxLine(extremes, obj) {
+    console.log("&&&&&&&&&&&&&&&&&&&&&&&&&&&");
+    console.log(extremes.elements[1].lin);
+    return line.findOne({
+        attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'linestring'], [Sequelize.fn('ST_DISTANCE', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), extremes.elements[1].lin), 'maxLineDistance']],
+        where: {
+            [Op.or]: [{name: obj.nameStreet}, {street: obj.nameStreet}]
+        },
+        order: Sequelize.literal('"maxLineDistance" ASC')
+    });
+}
+
+
+/**
+ * Restituisce l'intersezione tra la posizione di un punto lungo una linea in percentuale.
+ *
+ * @param resultMinPoint - L'oggetto contenente la geometria per la line
+ * @param extrObj   - L'oggetto contenente la geometria per il punto
+ * @return {Promise<Model>}
+ */
+function minExtrPercentInLine(resultMinPoint, extrObj)
+{
+    return point.findOne({
+        attributes: ['id',[Sequelize.fn('ST_LINE_LOCATE_POINT', resultMinPoint.dataValues.linestring, extrObj.elements[0].lin), 'minPercent']]
+    });
+}
+
+/**
+ * Restituisce l'intersezione tra la posizione di un punto lungo una linea in percentuale.
+ *
+ * @param resultMaxPoint - L'oggetto contenente la geometria per la line
+ * @param extrObj   - L'oggetto contenente la geometria per il punto
+ * @return {Promise<Model>}
+ */
+function maxExtrPercentInLine(resultMaxPoint, extrObj)
+{
+    return point.findOne({
+        attributes: ['id',[Sequelize.fn('ST_LINE_LOCATE_POINT', resultMaxPoint.dataValues.linestring, extrObj.elements[1].lin), 'maxPercent']]
+    });
+}
+
+function lineInterpolatePointMin(linestringObj, percent)
+{
+    return point.findOne({
+        attributes: ['id',[Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_LINE_INTERPOLATE_POINT', linestringObj.dataValues.linestring, percent)), 'minPointOnLine']]
+    });
+}
+
+function lineInterpolatePointMax(linestringObj, percent)
+{
+    return point.findOne({
+        attributes: ['id',[Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_LINE_INTERPOLATE_POINT', linestringObj.dataValues.linestring, percent)), 'maxPointOnLine']]
+    });
+}
+
+
 
 // This should work in node.js and other ES5 compliant implementations.
 function isEmptyObject(obj) {
@@ -223,8 +295,8 @@ function choosePointsForHousenumber(points, myNumber) {
             type: 'extremes',
             elements: []
         };
-        objExtr.elements.push(maxNear);
         objExtr.elements.push(minNear);
+        objExtr.elements.push(maxNear);
         return objExtr;
     }
 }
@@ -319,10 +391,57 @@ module.exports = {
                                                 var extrObj = choosePointsForHousenumber(pointsInCityObj, req.body.housenumber);
                                                 console.log("oggetto: "+extrObj.type);
                                                     //TODO Avendo più punti, devo decidere quali lon e lat restituire.
-                                                getLatLon(extrObj);
+                                                //getLatLon(extrObj);
+                                                var latLonObj = {};
+                                                if(extrObj.type === 'equal' || extrObj.type === 'maxNear' || extrObj.type === 'minNear')
+                                                {
+                                                    latLonObj = {
+                                                        lat: extrObj.element.lat,
+                                                        lon: extrObj.element.lon,
+                                                    }
+                                                }
+                                                else if(extrObj.type = 'extremes')
+                                                {
+                                                    console.log("òòòòòòòòòòòòòòòòòòòòòòòòòòòòò");
+                                                    console.log(JSON.stringify(extrObj.elements[0]));
+                                                    queryPointsMinLine(extrObj, obj).then(function (resultMinPoint) {
+                                                        console.log("£££££££££££££££££££££££££\n\n");
+                                                        console.log(resultMinPoint);
+                                                        queryPointsMaxLine(extrObj, obj).then(function (resultMaxPoint) {
+                                                            console.log("!!!!!!!!!!!!!!!!!!!!!\n\n");
+                                                            console.log(resultMaxPoint);
+                                                            if(resultMinPoint.dataValues.id === resultMaxPoint.dataValues.id)
+                                                            {
+                                                                console.log("La line per gli estremi è la stessa!!!");
+                                                                minExtrPercentInLine(resultMinPoint, extrObj).then(function (percentMin) {
+                                                                    console.log("PERCENTUALE MIN:::::::::::\n");
+                                                                    console.log(percentMin.dataValues.minPercent);
+                                                                    maxExtrPercentInLine(resultMaxPoint, extrObj).then(function (percentMax) {
+                                                                        console.log("PERCENTUALE MAX:::::::::::\n");
+                                                                        console.log(percentMax.dataValues.maxPercent);
+                                                                        //TODO INTERPOLATE (resultMinPoint (max è uguale, stessa linestring), percentMin.dataValues.minPercent)
+                                                                        lineInterpolatePointMin(resultMinPoint,percentMin.dataValues.minPercent).then(function (minPointOnLine) {
+                                                                            console.log("PUNTO DI MINIMO SULLA LINEA, COORDINATE:\n");
+                                                                            console.log(minPointOnLine.dataValues.minPointOnLine);
+                                                                            lineInterpolatePointMax(resultMinPoint,percentMax.dataValues.maxPercent).then(function (maxPointOnLine) {
+                                                                                console.log("PUNTO DI MASSIMO SULLA LINEA, COORDINATE:\n");
+                                                                                console.log(maxPointOnLine.dataValues.maxPointOnLine);
+                                                                            });
+                                                                        });
+                                                                    });
+                                                                });
+                                                            }
+                                                        })
+                                                    });
+                                                    latLonObj = {
+                                                        lat: '41.8690322874759',
+                                                        lon: '12.63069354943947',
+                                                    }
+                                                }
+
                                                 res.render('address', {
-                                                    lon: '13.8975237757149'/*points.dataValues.lon*/,
-                                                    lat: '41.3944400645477'/*points.dataValues.lat*/,
+                                                    lon: latLonObj.lon,
+                                                    lat: latLonObj.lat,
                                                     city: req.body.city,
                                                     street: req.body.street,
                                                     housenumber: req.body.housenumber,

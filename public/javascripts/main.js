@@ -15,7 +15,7 @@ startFn();
 
 //Initialize our Google Map
 function initialize() {
-    var center = new google.maps.LatLng(document.getElementsByTagName('p')[2].innerHTML,document.getElementsByTagName('p')[1].innerHTML);//('41.3944400645477', '13.8975237757149');
+    var center = new google.maps.LatLng('41.82452351384704', '12.63069354943947');//document.getElementsByTagName('p')[2].innerHTML,document.getElementsByTagName('p')[1].innerHTML);//('41.3944400645477', '13.8975237757149');
     var mapOptions = {
         zoom: 13,
         mapTypeId: google.maps.MapTypeId.ROADMAP,
@@ -29,7 +29,7 @@ function initialize() {
 function populateMarkers(dataType) {
             var marker = new google.maps.Marker({
                 map: map,
-                position: new google.maps.LatLng(document.getElementsByTagName('p')[2].innerHTML, document.getElementsByTagName('p')[1].innerHTML),
+                position: new google.maps.LatLng('41.82452351384704', '12.63069354943947'),//document.getElementsByTagName('p')[2].innerHTML, document.getElementsByTagName('p')[1].innerHTML),
                 city: document.getElementsByTagName('p')[3].innerHTML,
                 street: document.getElementsByTagName('p')[4].innerHTML,
                 housenumber: document.getElementsByTagName('p')[5].innerHTML,
