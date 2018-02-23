@@ -6,78 +6,6 @@ const Sequelize = require('sequelize');
 const Op = Sequelize.Op;
 var math = require('mathjs');
 
-function queryIntersectStreetCity(obj) {
-    queryCityInPolygon(obj).then(function (polygons) {
-        var foundCity = getMaxWayAreaPol(polygons);
-
-        console.log("&&&&&&\n\n\n");
-        console.log(foundCity.dataValues.id);
-
-        queryStreetInLines(obj, foundCity).then(function (lines) {
-            console.log("^^^ "+lines.length);
-            if(lines === null)
-            {
-                console.log("Non ho trovato "+obj.nameStreet);
-                //TODO res.render(Via errata o non presente nel database).
-            }
-            else
-            {
-                for(var j=0; j<lines.length; j++)
-                {
-                    if(lines[j].dataValues.intersL)
-                    {
-                        linesInCityObj.push(lines[j].dataValues);
-                        console.log("lines trovate-------------\n");
-                        console.log(lines[j].dataValues.id);
-                    }
-                }
-                console.log("Numero linee: "+linesInCityObj.length);
-                if(linesInCityObj.length !== 0)
-                {
-                    //HO TROVATO STREET IN CITY, CERCARE IN POINTS
-                    console.log("Ho trovato le lineeeeeee\n");
-                    queryStreetInPoints(obj, foundCity).then(function (points) {
-                        console.log("LUNGHEZZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\n");
-                        console.log(points.length);
-                        if(points.length !== 0)
-                        {
-                            //TODO Ho trovato qualcosa in points.........
-                        }
-                        else{
-                            //TODO res.render coordinate del punto centrale.
-                            console.log("Non c'è nulla in points, restituisco il punto centrale della via.\n");
-                        }
-                    });
-                }
-            }
-        });
-    });
-//    console.log(linesInCityObj.length+"\n"+"òòòòòòòòòòòòòòòòòò");
-//    return linesInCityObj;
-}
-
-
-
-
-/*function queryCityStreet(obj) {
-    return point
-        .findAll({
-            attributes: ['city', 'street', 'housenumber', 'lon', 'lat'],
-            where: {
-                [Op.and]: [{city: obj.city}, {street: obj.street}]
-            }
-        })
-}
-
-function queryCityStreetHouseNumber(obj) {
-    return point
-        .findOne({
-        //     attributes: ['city', 'street', 'housenumber', 'lon', 'lat'],
-        where: {
-            [Op.and]: [{city: obj.city}, {street: obj.street}, {housenumber: obj.housenumber}]
-        }
-    })
-}*/
 
 function getMaxWayAreaPol(objectsArr) {
     var max = objectsArr[0];
@@ -100,7 +28,6 @@ function queryCityInPolygon(obj) {
 }
 
 function queryStreetInLines(obj, objPol) {
-//    console.log("Ecco;;;;;;;;;;;; "+objPol.dataValues.pol);
     return line
         .findAll({
             attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_CENTROID', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'centroidL'], [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'lin'], [Sequelize.fn('ST_INTERSECTS', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol)), 'intersL']],
@@ -166,7 +93,7 @@ function minExtrPercentInLine(resultMinPoint, extrObj)
 {
     return point.findOne({
         attributes: ['id',[Sequelize.fn('ST_LINE_LOCATE_POINT', resultMinPoint.dataValues.linestring, extrObj.elements[0].lin), 'minPercent']]
-    });
+    })
 }
 
 /**
@@ -180,13 +107,27 @@ function maxExtrPercentInLine(resultMaxPoint, extrObj)
 {
     return point.findOne({
         attributes: ['id',[Sequelize.fn('ST_LINE_LOCATE_POINT', resultMaxPoint.dataValues.linestring, extrObj.elements[1].lin), 'maxPercent']]
-    });
+    })
 }
 
 function lineInterpolatePointMin(linestringObj, percent)
 {
     return point.findOne({
         attributes: ['id',[Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_LINE_INTERPOLATE_POINT', linestringObj.dataValues.linestring, percent)), 'minPointOnLine']]
+    });
+}
+
+function mergeLines(lineA, lineB)
+{
+    return line.findOne({
+        attributes: ['id',[Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_MAKELINE', lineA, lineB)), 'linestring']]
+    });
+}
+
+function lineInterpolatePoint(linestring, percent)
+{
+    return point.findOne({
+        attributes: ['id',[Sequelize.fn('ST_LINE_INTERPOLATE_POINT', linestring, percent), 'point']]
     });
 }
 
@@ -197,34 +138,47 @@ function lineInterpolatePointMax(linestringObj, percent)
     });
 }
 
+/**
+ *
+ * @param linestringObj - L'oggetto contenente la sottostringa di una linestring data la posizione del punto iniziale (percentMin) e quella del punto finale (percentMax)
+ * @param percentMin
+ * @param percentMax
+ * @return {Promise<Model>}
+ */
+function lineSubstringMinMax(linestringObj, percentMin, percentMax) {
+    return point.findOne({
+        attributes: ['id',[Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_LINE_SUBSTRING', linestringObj.dataValues.linestring, percentMin, percentMax)), 'substringMinMax']]
+    });
+}
 
-
-// This should work in node.js and other ES5 compliant implementations.
+/**
+ * Determina se un oggetto è vuoto.
+ * @param obj
+ * @return {boolean}
+ */
 function isEmptyObject(obj) {
     return !Object.keys(obj).length;
 }
 
-
-function getLatLon(object) {
-    console.log("---------------");
-
-    var latLonObj = {};
-//    console.log("INTERSEZIONE: " + pointsInCityObj[k].intersP + "....House Number: " + pointsInCityObj[k].housenumber + " ---lat " + pointsInCityObj[k].lat + " ---lon " + pointsInCityObj[k].lon);
-    if(object.type === 'equal' || object.type === 'maxNear' || object.type === 'minNear')
-    {
-        latLonObj = {
-            lat: object.element.lat,
-            lon: object.element.lon,
-        }
-    }
-    else if(object.type = 'extremes')
-    {
-       // console.log("Type")
-        console.log(JSON.stringify(object));
-    }
-    console.log("---------------");
+/**
+ * Calcola la posizione di un numero civico, rispetto al numero civico più piccolo più vicino e a quello più grande più vicino
+ * @param numMin
+ * @param numMax
+ * @param myNum
+ * @return {number}
+ */
+function houseNumberRatioPercent(numMin, numMax, myNum)
+{
+    console.log(numMin+"---------"+numMax+"-------"+myNum);
+    return (myNum-numMin)/(numMax-numMin);
 }
 
+/**
+ * Determina quali geometrie di punti con house number diverso da null possono essere usate per determinare la posizione del numero civico cercato.
+ * @param points - i nodi che intersecano la via e la città inserita, con house number diverso da null.
+ * @param myNumber - house number cercato.
+ * @return {Obj} - Restituisce le geometrie da usare per il calcolo della posizione di un numero civico.
+ */
 function choosePointsForHousenumber(points, myNumber) {
     var objects = [];
     var maxEl = points[0];
@@ -253,20 +207,16 @@ function choosePointsForHousenumber(points, myNumber) {
             {
                 if(parseInt(points[i].housenumber) < parseInt(maxNear.housenumber))
                 {
-                    maxNear = {
-                        type: 'maxNear',
-                        element: points[i]
-                    };
+                    maxNear = points[i];
                 }
                 else if(parseInt(points[i].housenumber) > parseInt(maxEl.housenumber))
                 {
-                    maxEl = {
-                        type: 'minNear',
-                        element: points[i]
-                    };
+                    maxEl = points[i];
                 }
             }
-            else maxNear = points[i];
+            else {
+                maxNear = points[i];
+            }
         }
         else if(parseInt(points[i].housenumber) < parseInt(myNumber))
         {
@@ -282,13 +232,25 @@ function choosePointsForHousenumber(points, myNumber) {
                     minEl = points[i];
                 }
             }
-            else minNear = points[i];
+            else{
+                minNear = points[i];
+            }
         }
     }
 
     if(equalBool === true) return objEq;
-    else if(maxBool === true) return minNear;
-    else if(minBool === true) return maxNear;
+    else if(maxBool === true){
+        return {
+            type: 'minNear',
+            element: minNear
+        }
+    }
+    else if(minBool === true){
+        return{
+            type: 'maxNear',
+            element: maxNear
+        }
+    }
     else if(maxBool === false && minBool === false)
     {
         objExtr = {
@@ -301,6 +263,10 @@ function choosePointsForHousenumber(points, myNumber) {
     }
 }
 
+/**
+ *  Racchiude tutte le query necessarie ad ottenere le coordinate del punto in input.
+ * @type {{listQuery(*=, *=): void}}
+ */
 module.exports = {
     listQuery(req, res) {
 
@@ -359,21 +325,22 @@ module.exports = {
                                                     pointsInCityObj.push(points[z].dataValues);
                                                 }
                                             }
-                                            console.log("In point c'è qualcosa per" + obj.nameStreet + " con housenumber NOT NULL. Quelli che intersecano la città inserita sono " + pointsInCityObj.length);
+                                            console.log("In point c'è qualcosa per " + obj.nameStreet + " con housenumber NOT NULL. Quelli che intersecano la città inserita sono " + pointsInCityObj.length);
                                             if (pointsInCityObj.length === 0) {
                                                 //HO TROVATO QUALCHE PUNTO IN POINTS CON HOUSENUMBER DIVERSO DA NULL, MA NESSUNO DI QUESTI INTERSECA LA CITTA' INSERITA.
-                                                console.log("Non c'è intersezione da points, restituisco uno dei punti centrali della via.\n");
+                                                console.log("Non c'è intersezione con la città da points, restituisco uno dei centroidi della via.\n");
                                                 res.render('address', {
                                                     lon: linesInCityObj[0].centroidL[0],
                                                     lat: linesInCityObj[0].centroidL[1],
                                                     city: req.body.city,
                                                     street: req.body.street,
                                                     housenumber: req.body.housenumber,
-                                                    title: 'Addresses in Rome',
-                                                    subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules'
+                                                    subtitle: 'No house number found. This one on the centroid of the street.'
                                                 });
                                             }
                                             else if (pointsInCityObj.length === 1) {
+
+                                                //C'è un solo numero civico nel db. Restituisco la geometria di questo.
                                                 console.log("Un solo indirizzo per " + obj.nameStreet + " in points. INTERSEZIONE: " + pointsInCityObj[0].intersP + ".... Coordinate: " + pointsInCityObj[0].lat + "..." + pointsInCityObj[0].lon);
                                                 res.render('address', {
                                                     lon: pointsInCityObj[0].lon,
@@ -381,51 +348,96 @@ module.exports = {
                                                     city: req.body.city,
                                                     street: req.body.street,
                                                     housenumber: req.body.housenumber,
-                                                    title: 'Addresses in Rome',
-                                                    subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules'
+                                                    subtitle: 'A single one house number found!'
                                                 });
                                             }
                                             else {
+                                                //C'è più di un numero civico per l'indirizzo richiesto. Ricavo la posizione del numero richiesto da questi.
                                                 console.log("Più di un indirizzo con housenumber in point interseca la città.\n");
+
                                                 //SCELGO GLI ELEMENTI IN POINTS PIU' VICINI AL NUMERO CIVICO INSERITO.
                                                 var extrObj = choosePointsForHousenumber(pointsInCityObj, req.body.housenumber);
                                                 console.log("oggetto: "+extrObj.type);
-                                                    //TODO Avendo più punti, devo decidere quali lon e lat restituire.
-                                                //getLatLon(extrObj);
-                                                var latLonObj = {};
+                                                //Avendo più punti, devo decidere quali lon e lat restituire.
                                                 if(extrObj.type === 'equal' || extrObj.type === 'maxNear' || extrObj.type === 'minNear')
                                                 {
-                                                    latLonObj = {
-                                                        lat: extrObj.element.lat,
+                                                    //Se trovo il matching esatto per il civico inserito, restituisco le sue coordinate. Se il numero in input è maggiore(minore) di ogni
+                                                    //civico trovato pe quell'indirizzo, restituisco le coordinate del civico più grande (piccolo) per l'indirizzo.
+                                                    res.render('address', {
                                                         lon: extrObj.element.lon,
-                                                    }
+                                                        lat: extrObj.element.lat,
+                                                        city: req.body.city,
+                                                        street: req.body.street,
+                                                        housenumber: req.body.housenumber,
+                                                        title: 'Addresses in Rome',
+                                                        subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules'
+                                                    });
+
                                                 }
                                                 else if(extrObj.type = 'extremes')
                                                 {
+                                                    //Si verifica tale if quando trovo degli estremi (numero più vicino minore e numero più vicino maggiore) per l'indirizzo in input
+
                                                     console.log("òòòòòòòòòòòòòòòòòòòòòòòòòòòòò");
                                                     console.log(JSON.stringify(extrObj.elements[0]));
+                                                    console.log(JSON.stringify(extrObj.elements[1]));
+
                                                     queryPointsMinLine(extrObj, obj).then(function (resultMinPoint) {
-                                                        console.log("£££££££££££££££££££££££££\n\n");
-                                                        console.log(resultMinPoint);
                                                         queryPointsMaxLine(extrObj, obj).then(function (resultMaxPoint) {
-                                                            console.log("!!!!!!!!!!!!!!!!!!!!!\n\n");
-                                                            console.log(resultMaxPoint);
                                                             if(resultMinPoint.dataValues.id === resultMaxPoint.dataValues.id)
                                                             {
+                                                                //I punti agli estremi si trovano sulla stessa line.
                                                                 console.log("La line per gli estremi è la stessa!!!");
                                                                 minExtrPercentInLine(resultMinPoint, extrObj).then(function (percentMin) {
-                                                                    console.log("PERCENTUALE MIN:::::::::::\n");
-                                                                    console.log(percentMin.dataValues.minPercent);
                                                                     maxExtrPercentInLine(resultMaxPoint, extrObj).then(function (percentMax) {
-                                                                        console.log("PERCENTUALE MAX:::::::::::\n");
-                                                                        console.log(percentMax.dataValues.maxPercent);
-                                                                        //TODO INTERPOLATE (resultMinPoint (max è uguale, stessa linestring), percentMin.dataValues.minPercent)
                                                                         lineInterpolatePointMin(resultMinPoint,percentMin.dataValues.minPercent).then(function (minPointOnLine) {
-                                                                            console.log("PUNTO DI MINIMO SULLA LINEA, COORDINATE:\n");
-                                                                            console.log(minPointOnLine.dataValues.minPointOnLine);
                                                                             lineInterpolatePointMax(resultMinPoint,percentMax.dataValues.maxPercent).then(function (maxPointOnLine) {
-                                                                                console.log("PUNTO DI MASSIMO SULLA LINEA, COORDINATE:\n");
-                                                                                console.log(maxPointOnLine.dataValues.maxPointOnLine);
+                                                                                lineSubstringMinMax(resultMinPoint, percentMin.dataValues.minPercent, percentMax.dataValues.maxPercent).then(function (substring){
+                                                                                    var percentNewPoint = houseNumberRatioPercent(extrObj.elements[0].housenumber, extrObj.elements[1].housenumber, req.body.housenumber);
+                                                                                    lineInterpolatePoint(substring.dataValues.substringMinMax, percentNewPoint).then(function (finalResult) {
+                                                                                        console.log("FINAL POINT:");
+                                                                                        console.log(finalResult.dataValues.point);
+
+                                                                                        res.render('address', {
+                                                                                            lon: finalResult.dataValues.point.coordinates[0],
+                                                                                            lat: finalResult.dataValues.point.coordinates[1],
+                                                                                            city: req.body.city,
+                                                                                            street: req.body.street,
+                                                                                            housenumber: req.body.housenumber,
+                                                                                            title: 'Addresses',
+                                                                                            subtitle: 'Address found!!!!!'
+                                                                                        });
+                                                                                    });
+                                                                                });
+                                                                            });
+                                                                        });
+                                                                    });
+                                                                });
+                                                            }
+                                                            else
+                                                            {
+                                                                //Il civico maggiore e quello minore si trovano su due linee differenti. Le unisco tramite punti che toccano entramve le linee.
+                                                                mergeLines(resultMinPoint.dataValues.linestring, resultMaxPoint.dataValues.linestring).then(function (resultMerge) {
+                                                                    minExtrPercentInLine(resultMerge, extrObj).then(function (percentMin) {
+                                                                        maxExtrPercentInLine(resultMerge, extrObj).then(function (percentMax) {
+                                                                            lineInterpolatePointMin(resultMerge,percentMin.dataValues.minPercent).then(function (minPointOnLine) {
+                                                                                lineInterpolatePointMax(resultMerge,percentMax.dataValues.maxPercent).then(function (maxPointOnLine) {
+                                                                                    lineSubstringMinMax(resultMerge, percentMin.dataValues.minPercent, percentMax.dataValues.maxPercent).then(function (substring){
+                                                                                        var percentNewPoint = houseNumberRatioPercent(extrObj.elements[0].housenumber, extrObj.elements[1].housenumber, req.body.housenumber);
+                                                                                        lineInterpolatePoint(substring.dataValues.substringMinMax, percentNewPoint).then(function (finalResult) {
+
+                                                                                                res.render('address', {
+                                                                                                lon: finalResult.dataValues.point.coordinates[0],
+                                                                                                lat: finalResult.dataValues.point.coordinates[1],
+                                                                                                city: req.body.city,
+                                                                                                street: req.body.street,
+                                                                                                housenumber: req.body.housenumber,
+                                                                                                title: 'Addresses',
+                                                                                                subtitle: 'Address found!!!!!'
+                                                                                            });
+                                                                                        });
+                                                                                    });
+                                                                                });
                                                                             });
                                                                         });
                                                                     });
@@ -433,40 +445,20 @@ module.exports = {
                                                             }
                                                         })
                                                     });
-                                                    latLonObj = {
-                                                        lat: '41.8690322874759',
-                                                        lon: '12.63069354943947',
-                                                    }
                                                 }
-
-                                                res.render('address', {
-                                                    lon: latLonObj.lon,
-                                                    lat: latLonObj.lat,
-                                                    city: req.body.city,
-                                                    street: req.body.street,
-                                                    housenumber: req.body.housenumber,
-                                                    title: 'Addresses in Rome',
-                                                    subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules'
-                                                });
-
                                             }
                                         }
                                         else {
                                             //NON HO TROVATO ALCUN PUNTO CON HOUSENUMBER DIVERSO DA NULL.
                                             console.log("Non c'è nulla con housenumber in points, restituisco uno dei punti centrali della via.\n");
-                                            console.log("Housenumber inserito: " + req.body.housenumber);
 
-                                            //   console.log(linesInCityObj[0].centroidL.coordinates[0]+"*************"+linesInCityObj[0].centroidL.coordinates[1]);
-                                            //    console.log(JSON.stringify(linesInCityObj[0]));
-                                            //TODO Si può migliorare unendo tutte le parti delle vie che si toccano e da lì prendere il punto di intersezione.
                                             res.render('address', {
                                                 lon: linesInCityObj[0].centroidL.coordinates[0],
                                                 lat: linesInCityObj[0].centroidL.coordinates[1],
                                                 city: req.body.city,
                                                 street: req.body.street,
                                                 housenumber: req.body.housenumber,
-                                                title: 'Addresses in Rome',
-                                                subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules'
+                                                subtitle: 'Point based on centroid.'
                                             });
                                         }
                                     });
@@ -507,10 +499,3 @@ module.exports = {
 
     },
 };
-
-/*queryIntersectStreetCity(object).then(function (points) {
-
-//                    console.log("..."+points[0].dataValues.lon+"..."+points[0].dataValues.lat+"..."+req.body.city+"..."+req.body.street+"..."+req.body.housenumber);
-                    res.render('address', {lon: '13.8975237757149'/*points.dataValues.lon*/ //, lat: '41.3944400645477'/*points.dataValues.lat*/, city: req.body.city, street: req.body.street, housenumber: req.body.housenumber, title: 'Addresses in Rome', subtitle: 'Node.js / Google Maps Example with the help of the Express, Path, and Jade modules' });
-/*})
-.catch(error => res.status(400).send(error));*/
