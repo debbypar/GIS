@@ -19,7 +19,7 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use('/address', address);
 
 app.get('/',function(req,res){
-    res.render('layout', { title: 'Node.js / Google Maps Example', subtitle: 'with the help of the Express, Path, and Jade modules' });
+    res.render('layout', { title: 'Node.js / Google Maps Example', subtitle: '' });
 });
 
 module.exports = app;

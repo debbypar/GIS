@@ -9,7 +9,7 @@ html
             h1= title
             h2= subtitle
             nav
-                p Maps of great <a href="address" title="address">address</a>.
+                p Enter you address.
                 .main.container
                     .row
                         .col-md-6.col-md-offset-3
@@ -18,7 +18,7 @@ html
                 form(method='POST' action='/address')
                     div.form-group
                         label(for='city') City:
-                        input#city.form-control(type='text', placeholder='Ex. Rome' name='city')
+                        input#city.form-control(type='text', placeholder='Ex. Roma' name='city')
                     div.form-group
                         label(for='street') Street:
                         input#street.form-control(type='text', placeholder='Ex. Via Tuscolana' name='street')
