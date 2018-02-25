@@ -14,7 +14,7 @@ startFn();
 
 //Initialize our Google Map
 function initialize() {
-    var center = new google.maps.LatLng(document.getElementsByTagName('p')[2].innerHTML,document.getElementsByTagName('p')[1].innerHTML);//('41.3944400645477', '13.8975237757149');
+    var center = new google.maps.LatLng(document.getElementsByTagName('p')[2].innerHTML,document.getElementsByTagName('p')[1].innerHTML);
     var mapOptions = {
         zoom: 13,
         mapTypeId: google.maps.MapTypeId.ROADMAP,

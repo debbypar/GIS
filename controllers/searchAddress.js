@@ -27,9 +27,10 @@ function queryCityInPolygon(obj) {
 }
 
 function queryStreetInLines(obj, objPol) {
+    console.log("^^^^^^^^^^"+objPol.dataValues.pol+"..."+obj);
     return line
         .findAll({
-            attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_CENTROID', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'centroidL'], [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'lin'], [Sequelize.fn('ST_INTERSECTS', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol)), 'intersL']],
+            attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_CENTROID', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'centroidL'], [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'linestring'], [Sequelize.fn('ST_INTERSECTS', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol)), 'intersL']],
             where: {
                 [Op.or]: [{name: obj.nameStreet}, {street: obj.nameStreet}]
             }
@@ -39,7 +40,7 @@ function queryStreetInLines(obj, objPol) {
 function queryStreetInPoints(obj, objPol) {
     return point
         .findAll({
-            attributes: ['id', 'name', 'city', 'street', 'housenumber', 'way', 'lon', 'lat', [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'lin'], [Sequelize.fn('ST_CONTAINS', Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol), Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)))), 'intersP']],
+            attributes: ['id', 'name', 'city', 'street', 'housenumber', 'way', 'lon', 'lat', [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'linestring'], [Sequelize.fn('ST_CONTAINS', Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol), Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)))), 'intersP']],
             where: {
                 [Op.and]: [{
                     [Op.or]: [{name: obj.nameStreet}, {street: obj.nameStreet}]
@@ -57,7 +58,7 @@ function queryStreetInPoints(obj, objPol) {
  **/
 function queryPointsMinLine(extremes, obj) {
     return line.findOne({
-        attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326), 'linestringJson'], [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'linestring'], [Sequelize.fn('ST_DISTANCE', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), extremes.elements[0].lin), 'minLineDistance']],
+        attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326), 'linestringJson'], [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'linestring'], [Sequelize.fn('ST_DISTANCE', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), extremes.elements[0].linestring), 'minLineDistance']],
         where: {
             [Op.or]: [{name: obj.nameStreet}, {street: obj.nameStreet}]
         },
@@ -70,7 +71,7 @@ function queryPointsMinLine(extremes, obj) {
  **/
 function queryPointsMaxLine(extremes, obj) {
     return line.findOne({
-        attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326), 'linestringJson'], [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'linestring'], [Sequelize.fn('ST_DISTANCE', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), extremes.elements[1].lin), 'maxLineDistance']],
+        attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326), 'linestringJson'], [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'linestring'], [Sequelize.fn('ST_DISTANCE', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), extremes.elements[1].linestring), 'maxLineDistance']],
         where: {
             [Op.or]: [{name: obj.nameStreet}, {street: obj.nameStreet}]
         },
@@ -89,7 +90,7 @@ function queryPointsMaxLine(extremes, obj) {
 function minExtrPercentInLine(resultMinPoint, extrObj)
 {
     return point.findOne({
-        attributes: ['id',[Sequelize.fn('ST_LINE_LOCATE_POINT', resultMinPoint.dataValues.linestring, extrObj.elements[0].lin), 'minPercent']]
+        attributes: ['id',[Sequelize.fn('ST_LINE_LOCATE_POINT', resultMinPoint.dataValues.linestring, extrObj.elements[0].linestring), 'minPercent']]
     })
 }
 
@@ -103,7 +104,7 @@ function minExtrPercentInLine(resultMinPoint, extrObj)
 function maxExtrPercentInLine(resultMaxPoint, extrObj)
 {
     return point.findOne({
-        attributes: ['id',[Sequelize.fn('ST_LINE_LOCATE_POINT', resultMaxPoint.dataValues.linestring, extrObj.elements[1].lin), 'maxPercent']]
+        attributes: ['id',[Sequelize.fn('ST_LINE_LOCATE_POINT', resultMaxPoint.dataValues.linestring, extrObj.elements[1].linestring), 'maxPercent']]
     })
 }
 
@@ -148,15 +149,56 @@ function lineSubstringMinMax(linestringObj, percentMin, percentMax) {
     });
 }
 
-function querySameDirection(lineMax, hasTheSameDir) {
-    if(!hasTheSameDir)
-    {
+/**
+ * Crea una multilinea per tutte le linee che hanno nome = obj.street
+ * @param street
+ * @return {Promise<Model>}
+ */
+function getMultiline(obj) {
+        return line
+            .findOne({
+                    attributes: ['name', [Sequelize.fn('ST_LINEMERGE', Sequelize.fn('ST_COLLECT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), 'multiline']],
+                    where: {
+                        name: obj.street},
+                    group: 'name'
+            });
+}
+
+//La funzione dump va in out if memory.
+/*function splitMultiline(multiline, objPol)
+{
+    return line
+        .findAll({
+            attributes: ['id', [Sequelize.fn('ST_DUMP', Sequelize.fn('ST_ASTEXT',multiline)),'dumpLines']]
+        })
+}*/
+
+/**
+ * Restituisce la linestring in posizione 'position' da una multilinea.
+ * @param multiline
+ * @param position
+ * @return {Promise<Model>}
+ */
+function getLineN(multiline, position) {
+    return line
+        .findOne({
+            attributes: ['id', [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_GEOMETRYN', Sequelize.fn('ST_ASTEXT',multiline), position)), 'geomN']]
+        });
+
+}
+
+function reverseDirection(lineMax, hasTheSameDir) {
+/*    if(!hasTheSameDir)
+    {*/
         return line
             .findOne({
                 attributes: ['id', [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_REVERSE', Sequelize.fn('ST_GEOMFROMTEXT', lineMax.dataValues.linestring))), 'linestring']]
                 })
-    }
-    else return lineMax;
+/*    }
+    else{
+        console.log("====================");
+        return lineMax;
+    }*/
 }
 
 /**
@@ -475,7 +517,43 @@ module.exports = {
                                                                 console.log("\n\n");
                                                                 console.log("Le linee per maggiore e minore sono differenti.");
 
-                                                                querySameDirection(resultMaxPoint, hasTheSameDirection(arrLineCoord)).then(function (resultDirection) {
+                                                                if(!hasTheSameDirection(arrLineCoord))
+                                                                {
+                                                                    console.log("Le linee non hanno la stessa direzione.\n");
+                                                                    console.log("PRIMAAAAAA\n"+"MIN: "+resultMinPoint.dataValues.linestring);
+                                                                    console.log("PRIMAAAAAA\n"+"MAX: "+resultMaxPoint.dataValues.linestring);
+
+                                                                    reverseDirection(resultMaxPoint/*, hasTheSameDirection(arrLineCoord)*/).then(function (resultDirection) {
+                                                                        console.log("DOPOOOOOOOO\n"+"max: "+resultDirection.dataValues.linestring);
+                                                                        mergeLines(resultMinPoint.dataValues.linestring, resultDirection.dataValues.linestring/*resultMaxPoint.dataValues.linestring*/).then(function (resultMerge) {
+                                                                            console.log("MERGED AFTER REVERSE: "+resultMerge.dataValues.linestring);
+                                                                            minExtrPercentInLine(resultMerge, extrObj).then(function (percentMin) {
+                                                                                maxExtrPercentInLine(resultMerge, extrObj).then(function (percentMax) {
+                                                                                    lineInterpolatePointMin(resultMerge, percentMin.dataValues.minPercent).then(function (minPointOnLine) {
+                                                                                        lineInterpolatePointMax(resultMerge, percentMax.dataValues.maxPercent).then(function (maxPointOnLine) {
+                                                                                            lineSubstringMinMax(resultMerge, percentMin.dataValues.minPercent, percentMax.dataValues.maxPercent).then(function (substring) {
+                                                                                                var percentNewPoint = houseNumberRatioPercent(extrObj.elements[0].housenumber, extrObj.elements[1].housenumber, number);
+                                                                                                lineInterpolatePoint(substring.dataValues.substringMinMax, percentNewPoint).then(function (finalResult) {
+
+                                                                                                    res.render('address', {
+                                                                                                        lon: finalResult.dataValues.point.coordinates[0],
+                                                                                                        lat: finalResult.dataValues.point.coordinates[1],
+                                                                                                        city: req.body.city,
+                                                                                                        street: req.body.street,
+                                                                                                        housenumber: number,
+                                                                                                        title: 'Addresses in Lazio',
+                                                                                                        subtitle: 'Address found!!!!!'
+                                                                                                    });
+                                                                                                });
+                                                                                            });
+                                                                                        });
+                                                                                    });
+                                                                                });
+                                                                            });
+                                                                        });
+                                                                    });
+                                                                }
+                                                                else {
                                                                     mergeLines(resultMinPoint.dataValues.linestring, resultDirection.dataValues.linestring).then(function (resultMerge) {
                                                                         minExtrPercentInLine(resultMerge, extrObj).then(function (percentMin) {
                                                                             maxExtrPercentInLine(resultMerge, extrObj).then(function (percentMax) {
@@ -501,7 +579,7 @@ module.exports = {
                                                                             });
                                                                         });
                                                                     });
-                                                                });
+                                                                }
                                                             }
                                                         })
                                                     });
