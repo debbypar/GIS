@@ -30,7 +30,8 @@ function queryStreetInLines(obj, objPol) {
     console.log("^^^^^^^^^^"+objPol.dataValues.pol+"..."+obj);
     return line
         .findAll({
-            attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_CENTROID', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'centroidL'], [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'linestring'], [Sequelize.fn('ST_INTERSECTS', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol)), 'intersL']],
+        //    attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_CENTROID', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'centroidL'], [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'linestring'], [Sequelize.fn('ST_INTERSECTS', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol)), 'intersL']],
+            attributes: ['id', 'boundary', 'name', 'city', 'street', 'housenumber', 'way_area', 'way', [Sequelize.fn('ST_LINE_INTERPOLATE_POINT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326), 0.5), 'centroidL'], [Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326)), 'linestring'], [Sequelize.fn('ST_INTERSECTS', Sequelize.fn('ST_GEOMFROMTEXT', Sequelize.fn('ST_ASTEXT', Sequelize.fn('ST_TRANSFORM', Sequelize.col('way'), 4326))), Sequelize.fn('ST_GEOMFROMTEXT', objPol.dataValues.pol)), 'intersL']],
             where: {
                 [Op.or]: [{name: obj.nameStreet}, {street: obj.nameStreet}]
             }
@@ -411,8 +412,8 @@ module.exports = {
                                                     city: req.body.city,
                                                     street: req.body.street,
                                                     housenumber: number,
-                                                    subtitle: 'No house number found. This one on the centroid of the street.'
-                                                });
+                                                    title: 'Addresses in Lazio',
+                                                    subtitle: 'No house number found. Point based on centroid.'                                                });
                                             }
                                             else if (pointsInCityObj.length === 1) {
 
@@ -520,8 +521,8 @@ module.exports = {
                                                                 if(!hasTheSameDirection(arrLineCoord))
                                                                 {
                                                                     console.log("Le linee non hanno la stessa direzione.\n");
-                                                                    console.log("PRIMAAAAAA\n"+"MIN: "+resultMinPoint.dataValues.linestring);
-                                                                    console.log("PRIMAAAAAA\n"+"MAX: "+resultMaxPoint.dataValues.linestring);
+                                                                //    console.log("PRIMAAAAAA\n"+"MIN: "+resultMinPoint.dataValues.linestring);
+                                                                //    console.log("PRIMAAAAAA\n"+"MAX: "+resultMaxPoint.dataValues.linestring);
 
                                                                     reverseDirection(resultMaxPoint/*, hasTheSameDirection(arrLineCoord)*/).then(function (resultDirection) {
                                                                         console.log("DOPOOOOOOOO\n"+"max: "+resultDirection.dataValues.linestring);
@@ -554,7 +555,8 @@ module.exports = {
                                                                     });
                                                                 }
                                                                 else {
-                                                                    mergeLines(resultMinPoint.dataValues.linestring, resultDirection.dataValues.linestring).then(function (resultMerge) {
+                                                                    console.log("Le linee hanno la stessa direzione.\n");
+                                                                    mergeLines(resultMinPoint.dataValues.linestring, resultMaxPoint.dataValues.linestring).then(function (resultMerge) {
                                                                         minExtrPercentInLine(resultMerge, extrObj).then(function (percentMin) {
                                                                             maxExtrPercentInLine(resultMerge, extrObj).then(function (percentMax) {
                                                                                 lineInterpolatePointMin(resultMerge, percentMin.dataValues.minPercent).then(function (minPointOnLine) {
